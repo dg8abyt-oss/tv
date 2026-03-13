@@ -6,13 +6,13 @@
     <title>TV Dashboard</title>
     <style>
         :root {
-            var(--bg-color): #d1f2d1;
-            var(--text-color): #0a0f0a;
+            --bg-color: #d1f2d1;
+            --text-color: #0a0f0a;
         }
 
         body { 
-            background-color: #d1f2d1; 
-            color: #0a0f0a; 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
             font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
             display: flex; 
             flex-direction: column; 
@@ -21,6 +21,7 @@
             height: 100vh; 
             margin: 0; 
             overflow: hidden; 
+            cursor: pointer; /* Suggests clicking to unlock audio */
         }
 
         .dashboard {
@@ -54,8 +55,8 @@
             font-size: 3.5vw; 
             font-weight: 700; 
             text-align: center; 
-            background-color: #0a0f0a;
-            color: #d1f2d1;
+            background-color: var(--text-color);
+            color: var(--bg-color);
             padding: 24px 48px;
             border-radius: 24px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.15);
@@ -82,6 +83,12 @@
     </div>
 
     <script>
+        // Unlock audio on first click
+        document.body.addEventListener('click', () => {
+            const unlock = new SpeechSynthesisUtterance('');
+            window.speechSynthesis.speak(unlock);
+        }, { once: true });
+
         // Time & Weather setup
         function updateTime() {
             const now = new Date();
@@ -102,7 +109,7 @@
         getWeather();
         setInterval(getWeather, 600000); 
 
-        // Vercel Serverless Messaging System
+        // Vercel Serverless Messaging System with Text-to-Speech
         let msgTimeout;
         let lastMessageId = 0;
         const msgEl = document.getElementById('message');
@@ -114,13 +121,17 @@
                 const res = await fetch('/api/message');
                 const data = await res.json();
                 
-                // If there's a message AND the ID is new, display it
+                // If there's a message AND the ID is new, display it and say it
                 if (data.text && data.id !== lastMessageId) {
-                    lastMessageId = data.id; // Remember this message so we don't show it twice
+                    lastMessageId = data.id; 
                     
                     msgEl.innerText = data.text;
                     msgEl.classList.add('show');
                     dashboard.style.transform = 'translateY(-5vh)'; 
+                    
+                    // 🗣️ Speak the text out loud
+                    const utterance = new SpeechSynthesisUtterance(data.text);
+                    window.speechSynthesis.speak(utterance);
                     
                     clearTimeout(msgTimeout);
                     msgTimeout = setTimeout(() => { 
