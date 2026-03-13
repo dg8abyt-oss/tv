@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TV Remote</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0f0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TV Remote">
+
     <style>
         body { 
             font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
@@ -15,6 +22,9 @@
             background-color: #d1f2d1; 
             color: #0a0f0a; 
             margin: 0; 
+            /* Prevents selecting text accidentally while tapping */
+            user-select: none;
+            -webkit-user-select: none;
         }
         button { 
             font-size: 1.8rem; 
@@ -26,8 +36,8 @@
             border: none; 
             cursor: pointer; 
             box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            user-select: none; 
             transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
         }
         button:active { 
             transform: scale(0.95); 
@@ -53,6 +63,13 @@
     <div id="status">Ready to transmit</div>
 
     <script>
+        // Register the Service Worker for the PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then(() => {
+                console.log('Service Worker Registered');
+            });
+        }
+
         const btn = document.getElementById('talkBtn');
         const status = document.getElementById('status');
         
@@ -77,7 +94,7 @@
             recognition.continuous = false;
 
             const startListening = (e) => { 
-                e.preventDefault(); 
+                if(e.cancelable) e.preventDefault(); 
                 recognition.start(); 
                 btn.classList.add('recording');
                 btn.innerText = 'Listening...';
@@ -85,15 +102,15 @@
             };
             
             const stopListening = (e) => { 
-                e.preventDefault(); 
+                if(e.cancelable) e.preventDefault(); 
                 recognition.stop(); 
                 btn.classList.remove('recording');
                 btn.innerText = '🎤 Hold to Talk';
                 status.innerText = 'Processing...'; 
             };
 
-            btn.addEventListener('touchstart', startListening);
-            btn.addEventListener('touchend', stopListening);
+            btn.addEventListener('touchstart', startListening, {passive: false});
+            btn.addEventListener('touchend', stopListening, {passive: false});
             btn.addEventListener('mousedown', startListening);
             btn.addEventListener('mouseup', stopListening);
 
