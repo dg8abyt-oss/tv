@@ -6,14 +6,13 @@
     <title>TV Dashboard</title>
     <style>
         :root {
-            /* Light green background and deep black text */
-            --bg-color: #d1f2d1; 
-            --text-color: #0a0f0a;
+            var(--bg-color): #d1f2d1;
+            var(--text-color): #0a0f0a;
         }
 
         body { 
-            background-color: var(--bg-color); 
-            color: var(--text-color); 
+            background-color: #d1f2d1; 
+            color: #0a0f0a; 
             font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
             display: flex; 
             flex-direction: column; 
@@ -55,15 +54,11 @@
             font-size: 3.5vw; 
             font-weight: 700; 
             text-align: center; 
-            
-            /* Invert colors for the message to make it pop */
-            background-color: var(--text-color);
-            color: var(--bg-color);
+            background-color: #0a0f0a;
+            color: #d1f2d1;
             padding: 24px 48px;
             border-radius: 24px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-            
-            /* Smooth pop-up animation */
             transform: translateY(40px) scale(0.95);
             opacity: 0;
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -86,11 +81,8 @@
         <div id="message"></div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        
-        // 1. Update the Time (Clean formatting)
+        // Time & Weather setup
         function updateTime() {
             const now = new Date();
             document.getElementById('time').innerText = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -98,45 +90,48 @@
         setInterval(updateTime, 1000);
         updateTime();
 
-        // 2. Get the Weather (Edison, NJ)
         async function getWeather() {
             try {
-                // API URL optimized to return Fahrenheit and MPH directly
-                const apiUrl = 'https://api.open-meteo.com/v1/forecast?latitude=40.5187&longitude=-74.4121&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph';
-                const res = await fetch(apiUrl);
+                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=40.5187&longitude=-74.4121&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph');
                 const data = await res.json();
-                
-                const temp = Math.round(data.current_weather.temperature);
-                const wind = data.current_weather.windspeed;
-                
-                document.getElementById('weather').innerText = `${temp}°F • Wind: ${wind} mph`;
+                document.getElementById('weather').innerText = `${Math.round(data.current_weather.temperature)}°F • Wind: ${data.current_weather.windspeed} mph`;
             } catch (e) {
                 document.getElementById('weather').innerText = 'Weather currently unavailable';
             }
         }
         getWeather();
-        setInterval(getWeather, 600000); // Updates every 10 minutes
+        setInterval(getWeather, 600000); 
 
-        // 3. Listen for Messages
+        // Vercel Serverless Messaging System
         let msgTimeout;
+        let lastMessageId = 0;
         const msgEl = document.getElementById('message');
         const dashboard = document.getElementById('dashboard');
 
-        socket.on('displayMessage', (msg) => {
-            msgEl.innerText = msg;
-            
-            // Add the 'show' class to trigger the CSS animation
-            msgEl.classList.add('show');
-            dashboard.style.transform = 'translateY(-5vh)'; // Slightly bump the time up when a message appears
-            
-            clearTimeout(msgTimeout);
-            
-            // Hide the message after 8 seconds
-            msgTimeout = setTimeout(() => { 
-                msgEl.classList.remove('show'); 
-                dashboard.style.transform = 'translateY(0)'; // Reset time position
-            }, 8000); 
-        });
+        // Poll the API every 2 seconds
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/message');
+                const data = await res.json();
+                
+                // If there's a message AND the ID is new, display it
+                if (data.text && data.id !== lastMessageId) {
+                    lastMessageId = data.id; // Remember this message so we don't show it twice
+                    
+                    msgEl.innerText = data.text;
+                    msgEl.classList.add('show');
+                    dashboard.style.transform = 'translateY(-5vh)'; 
+                    
+                    clearTimeout(msgTimeout);
+                    msgTimeout = setTimeout(() => { 
+                        msgEl.classList.remove('show'); 
+                        dashboard.style.transform = 'translateY(0)'; 
+                    }, 8000); 
+                }
+            } catch (e) {
+                console.error("Couldn't fetch message", e);
+            }
+        }, 2000); 
     </script>
 </body>
 </html>
