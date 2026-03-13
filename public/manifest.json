@@ -1,0 +1,16 @@
+{
+  "name": "TV Remote",
+  "short_name": "Remote",
+  "start_url": "/talk",
+  "display": "standalone",
+  "background_color": "#d1f2d1",
+  "theme_color": "#0a0f0a",
+  "icons": [
+    {
+      "src": "https://ik.imagekit.io/migbb/download.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
