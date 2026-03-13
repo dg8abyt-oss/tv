@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Dashboard</title>
+    <style>
+        :root {
+            /* Light green background and deep black text */
+            --bg-color: #d1f2d1; 
+            --text-color: #0a0f0a;
+        }
+
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            overflow: hidden; 
+        }
+
+        .dashboard {
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        #time { 
+            font-size: 12vw; 
+            font-weight: 800; 
+            letter-spacing: -3px;
+            line-height: 1;
+        }
+
+        #weather { 
+            font-size: 3vw; 
+            font-weight: 500; 
+            margin-top: 1rem;
+            opacity: 0.85; 
+        }
+
+        #message-container { 
+            position: absolute;
+            bottom: 15%;
+            width: 90%;
+            display: flex; 
+            justify-content: center; 
+        }
+
+        #message { 
+            font-size: 3.5vw; 
+            font-weight: 700; 
+            text-align: center; 
+            
+            /* Invert colors for the message to make it pop */
+            background-color: var(--text-color);
+            color: var(--bg-color);
+            padding: 24px 48px;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            
+            /* Smooth pop-up animation */
+            transform: translateY(40px) scale(0.95);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #message.show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="dashboard" id="dashboard">
+        <div id="time">00:00 AM</div>
+        <div id="weather">Fetching weather...</div>
+    </div>
+
+    <div id="message-container">
+        <div id="message"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        
+        // 1. Update the Time (Clean formatting)
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('time').innerText = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // 2. Get the Weather (Edison, NJ)
+        async function getWeather() {
+            try {
+                // API URL optimized to return Fahrenheit and MPH directly
+                const apiUrl = 'https://api.open-meteo.com/v1/forecast?latitude=40.5187&longitude=-74.4121&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph';
+                const res = await fetch(apiUrl);
+                const data = await res.json();
+                
+                const temp = Math.round(data.current_weather.temperature);
+                const wind = data.current_weather.windspeed;
+                
+                document.getElementById('weather').innerText = `${temp}°F • Wind: ${wind} mph`;
+            } catch (e) {
+                document.getElementById('weather').innerText = 'Weather currently unavailable';
+            }
+        }
+        getWeather();
+        setInterval(getWeather, 600000); // Updates every 10 minutes
+
+        // 3. Listen for Messages
+        let msgTimeout;
+        const msgEl = document.getElementById('message');
+        const dashboard = document.getElementById('dashboard');
+
+        socket.on('displayMessage', (msg) => {
+            msgEl.innerText = msg;
+            
+            // Add the 'show' class to trigger the CSS animation
+            msgEl.classList.add('show');
+            dashboard.style.transform = 'translateY(-5vh)'; // Slightly bump the time up when a message appears
+            
+            clearTimeout(msgTimeout);
+            
+            // Hide the message after 8 seconds
+            msgTimeout = setTimeout(() => { 
+                msgEl.classList.remove('show'); 
+                dashboard.style.transform = 'translateY(0)'; // Reset time position
+            }, 8000); 
+        });
+    </script>
+</body>
+</html>
