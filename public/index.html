@@ -21,7 +21,6 @@
             height: 100vh; 
             margin: 0; 
             overflow: hidden; 
-            cursor: pointer;
         }
         .dashboard { text-align: center; transition: transform 0.3s ease; }
         #time { font-size: 12vw; font-weight: 800; letter-spacing: -3px; line-height: 1; }
@@ -35,9 +34,24 @@
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         #message.show { transform: translateY(0) scale(1); opacity: 1; }
+        
+        /* The Unlock Screen overlay */
+        #audio-unlock {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); z-index: 9999; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        #audio-unlock h1 {
+            color: var(--bg-color); background: var(--text-color); 
+            padding: 20px 40px; border-radius: 15px; border: 2px solid var(--bg-color);
+        }
     </style>
 </head>
 <body>
+    <div id="audio-unlock">
+        <h1>Tap TV Screen to Enable Sound</h1>
+    </div>
+
     <div class="dashboard" id="dashboard">
         <div id="time">00:00 AM</div>
         <div id="weather">Fetching weather...</div>
@@ -45,10 +59,15 @@
     <div id="message-container"><div id="message"></div></div>
 
     <script>
-        document.body.addEventListener('click', () => {
-            const unlock = new SpeechSynthesisUtterance('');
-            window.speechSynthesis.speak(unlock);
-        }, { once: true });
+        const unlockOverlay = document.getElementById('audio-unlock');
+        
+        // This function forces the browser to allow audio
+        unlockOverlay.addEventListener('click', () => {
+            // Play a test sound to unlock the browser's audio engine
+            const unlockSound = new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=System+ready');
+            unlockSound.play().catch(e => console.log("Audio unlock failed:", e));
+            unlockOverlay.style.display = 'none'; // Hide overlay after clicking
+        });
 
         function updateTime() {
             const now = new Date();
@@ -81,8 +100,12 @@
                     msgEl.innerText = data.text;
                     msgEl.classList.add('show');
                     dashboard.style.transform = 'translateY(-5vh)'; 
-                    const utterance = new SpeechSynthesisUtterance(data.text);
-                    window.speechSynthesis.speak(utterance);
+                    
+                    // Play the Cloud MP3 TTS
+                    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(data.text)}`;
+                    const msgAudio = new Audio(ttsUrl);
+                    msgAudio.play().catch(e => console.log("TTS play failed:", e));
+                    
                     clearTimeout(msgTimeout);
                     msgTimeout = setTimeout(() => { 
                         msgEl.classList.remove('show'); 
