@@ -4,76 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TV Remote</title>
-    
+    <link rel="icon" href="https://ik.imagekit.io/migbb/download.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0a0f0a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="TV Remote">
-
+    <link rel="apple-touch-icon" href="https://ik.imagekit.io/migbb/download.png">
     <style>
         body { 
-            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            background-color: #d1f2d1; 
-            color: #0a0f0a; 
-            margin: 0; 
-            /* Prevents selecting text accidentally while tapping */
-            user-select: none;
-            -webkit-user-select: none;
+            font-family: system-ui, sans-serif; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; height: 100vh; 
+            background-color: #d1f2d1; color: #0a0f0a; margin: 0; 
+            user-select: none; -webkit-user-select: none;
         }
         button { 
-            font-size: 1.8rem; 
-            font-weight: 700;
-            padding: 24px 48px; 
-            border-radius: 50px; 
-            background-color: #0a0f0a; 
-            color: #d1f2d1; 
-            border: none; 
-            cursor: pointer; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            transition: all 0.2s ease;
-            -webkit-tap-highlight-color: transparent;
+            font-size: 1.8rem; font-weight: 700; padding: 24px 48px; border-radius: 50px; 
+            background-color: #0a0f0a; color: #d1f2d1; border: none; cursor: pointer; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: all 0.2s ease;
         }
-        button:active { 
-            transform: scale(0.95); 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        .recording {
-            background-color: #2e7d32 !important; 
-            color: #fff !important;
-        }
-        #status { 
-            margin-top: 30px; 
-            font-size: 1.2rem; 
-            font-weight: 500;
-            opacity: 0.7; 
-            text-align: center; 
-            padding: 0 20px;
-            min-height: 2rem;
-        }
+        button:active { transform: scale(0.95); }
+        .recording { background-color: #2e7d32 !important; color: #fff !important; }
+        #status { margin-top: 30px; font-size: 1.2rem; opacity: 0.7; text-align: center; }
     </style>
 </head>
 <body>
     <button id="talkBtn">🎤 Hold to Talk</button>
-    <div id="status">Ready to transmit</div>
+    <div id="status">Ready</div>
 
     <script>
-        // Register the Service Worker for the PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').then(() => {
-                console.log('Service Worker Registered');
-            });
+            navigator.serviceWorker.register('/sw.js');
         }
 
         const btn = document.getElementById('talkBtn');
         const status = document.getElementById('status');
         
-        // Send message to Vercel API
         async function sendMessage(text) {
             try {
                 await fetch('/api/message', {
@@ -82,50 +47,32 @@
                     body: JSON.stringify({ text: text })
                 });
                 status.innerText = `Sent: "${text}"`;
-            } catch (e) {
-                status.innerText = 'Failed to send message.';
-            }
+            } catch (e) { status.innerText = 'Send failed'; }
         }
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
-            recognition.continuous = false;
-
             const startListening = (e) => { 
                 if(e.cancelable) e.preventDefault(); 
                 recognition.start(); 
                 btn.classList.add('recording');
                 btn.innerText = 'Listening...';
-                status.innerText = ''; 
             };
-            
             const stopListening = (e) => { 
                 if(e.cancelable) e.preventDefault(); 
                 recognition.stop(); 
                 btn.classList.remove('recording');
                 btn.innerText = '🎤 Hold to Talk';
-                status.innerText = 'Processing...'; 
             };
-
-            btn.addEventListener('touchstart', startListening, {passive: false});
-            btn.addEventListener('touchend', stopListening, {passive: false});
+            btn.addEventListener('touchstart', startListening);
+            btn.addEventListener('touchend', stopListening);
             btn.addEventListener('mousedown', startListening);
             btn.addEventListener('mouseup', stopListening);
-
-            recognition.onresult = (event) => {
-                const words = event.results[0][0].transcript;
-                sendMessage(words); 
-            };
-
-            recognition.onerror = (event) => {
-                status.innerText = 'Error: ' + event.error;
-            };
+            recognition.onresult = (e) => sendMessage(e.results[0][0].transcript);
         } else {
-            status.innerText = 'Voice not supported. Tap button to type.';
             btn.addEventListener('click', () => {
-                const msg = prompt("Type your message for the TV:");
+                const msg = prompt("Type message:");
                 if(msg) sendMessage(msg);
             });
         }
