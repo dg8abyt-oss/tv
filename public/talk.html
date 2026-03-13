@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Remote</title>
+    <style>
+        :root {
+            var(--bg-color): #d1f2d1;
+            var(--text-color): #0a0f0a;
+        }
+        body { 
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            background-color: #d1f2d1; 
+            color: #0a0f0a; 
+            margin: 0; 
+        }
+        button { 
+            font-size: 1.8rem; 
+            font-weight: 700;
+            padding: 24px 48px; 
+            border-radius: 50px; 
+            background-color: #0a0f0a; 
+            color: #d1f2d1; 
+            border: none; 
+            cursor: pointer; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            user-select: none; 
+            transition: all 0.2s ease;
+        }
+        button:active { 
+            transform: scale(0.95); 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .recording {
+            background-color: #2e7d32 !important; /* Darker green when active */
+            color: #fff !important;
+        }
+        #status { 
+            margin-top: 30px; 
+            font-size: 1.2rem; 
+            font-weight: 500;
+            opacity: 0.7; 
+            text-align: center; 
+            padding: 0 20px;
+            min-height: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <button id="talkBtn">🎤 Hold to Talk</button>
+    <div id="status">Ready to transmit</div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const btn = document.getElementById('talkBtn');
+        const status = document.getElementById('status');
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+
+            const startListening = (e) => { 
+                e.preventDefault(); 
+                recognition.start(); 
+                btn.classList.add('recording');
+                btn.innerText = 'Listening...';
+                status.innerText = ''; 
+            };
+            
+            const stopListening = (e) => { 
+                e.preventDefault(); 
+                recognition.stop(); 
+                btn.classList.remove('recording');
+                btn.innerText = '🎤 Hold to Talk';
+                status.innerText = 'Processing...'; 
+            };
+
+            btn.addEventListener('touchstart', startListening);
+            btn.addEventListener('touchend', stopListening);
+            btn.addEventListener('mousedown', startListening);
+            btn.addEventListener('mouseup', stopListening);
+
+            recognition.onresult = (event) => {
+                const words = event.results[0][0].transcript;
+                status.innerText = `Sent: "${words}"`;
+                socket.emit('speak', words); 
+            };
+
+            recognition.onerror = (event) => {
+                status.innerText = 'Error: ' + event.error;
+            };
+        } else {
+            status.innerText = 'Voice not supported. Tap button to type.';
+            btn.addEventListener('click', () => {
+                const msg = prompt("Type your message for the TV:");
+                if(msg) { 
+                    socket.emit('speak', msg); 
+                    status.innerText = `Sent: "${msg}"`; 
+                }
+            });
+        }
+    </script>
+</body>
+</html>
