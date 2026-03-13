@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TV Remote</title>
     <style>
-        :root {
-            var(--bg-color): #d1f2d1;
-            var(--text-color): #0a0f0a;
-        }
         body { 
             font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
             display: flex; 
@@ -38,7 +34,7 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         .recording {
-            background-color: #2e7d32 !important; /* Darker green when active */
+            background-color: #2e7d32 !important; 
             color: #fff !important;
         }
         #status { 
@@ -56,12 +52,24 @@
     <button id="talkBtn">🎤 Hold to Talk</button>
     <div id="status">Ready to transmit</div>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
         const btn = document.getElementById('talkBtn');
         const status = document.getElementById('status');
         
+        // Send message to Vercel API
+        async function sendMessage(text) {
+            try {
+                await fetch('/api/message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                status.innerText = `Sent: "${text}"`;
+            } catch (e) {
+                status.innerText = 'Failed to send message.';
+            }
+        }
+
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         
         if (SpeechRecognition) {
@@ -91,8 +99,7 @@
 
             recognition.onresult = (event) => {
                 const words = event.results[0][0].transcript;
-                status.innerText = `Sent: "${words}"`;
-                socket.emit('speak', words); 
+                sendMessage(words); 
             };
 
             recognition.onerror = (event) => {
@@ -102,10 +109,7 @@
             status.innerText = 'Voice not supported. Tap button to type.';
             btn.addEventListener('click', () => {
                 const msg = prompt("Type your message for the TV:");
-                if(msg) { 
-                    socket.emit('speak', msg); 
-                    status.innerText = `Sent: "${msg}"`; 
-                }
+                if(msg) sendMessage(msg);
             });
         }
     </script>
